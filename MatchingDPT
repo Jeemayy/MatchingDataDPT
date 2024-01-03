@@ -1,0 +1,158 @@
+# Load the data
+library(readxl)
+data1 <- read_excel("C:/INDEKSTAT/Matching/DPT 2024.xlsx")
+data2 <- read_excel("C:/INDEKSTAT/Matching/UPDATE 2024.xlsx")
+
+# Function to collapse multiple occurrences of a letter and remove vowels
+clean_text <- function(text) {
+  # Convert to lowercase
+  text <- tolower(text)
+  
+  # Collapse multiple occurrences of a letter to a single letter
+  text <- gsub("(.)\\1+", "\\1", text)
+  
+  # Remove  (U, E, O, B, G, W, M, N)
+  text <- gsub("[ueobgwmn]", "", text)
+  
+  # Remove non-alphanumeric characters and digits
+  text <- gsub("[^[:alnum:]]", "", text)
+  
+  return(text)
+}
+# Pembersihan pada kolom data1$kel, data1$kec, dan data1$kab
+data1$clean <- clean_text(paste(data1$kab, data1$kec, data1$kel, sep = " "))
+# Pembersihan pada kolom data2$new_kab_kota, data2$nm_kec, dan data2$nm_desa
+data2$clean <- clean_text(paste(data2$`new kab/kota`, data2$nm_kec, data2$nm_desa, sep = " "))
+
+merged_data <- merge(data1, data2, by.x = "clean", by.y = "clean", all.x = TRUE)
+selected_columns <- c(names(data1), names(data2$`new kab/kota`), "nm_kec", "nm_desa", "dapil_kab_2024", "kd_desa")
+final_data <- merged_data[selected_columns]
+
+# Isi nilai kosong DAPIL KAB
+final_data$isi_dapil <- ifelse(is.na(final_data$`DAPIL KAB`), final_data$dapil_kab_2024, final_data$`DAPIL KAB`)
+View(final_data)
+
+# Menghitung jumlah NA pada masing-masing kolom di final_data
+jumlah_na <- colSums(is.na(final_data))
+print(jumlah_na)
+
+# Menggunakan subset untuk menampilkan baris dengan setidaknya satu nilai NA
+data_na_only <- subset(final_data, apply(final_data, 1, function(x) any(is.na(x))))
+View(data_na_only)
+
+
+
+library(openxlsx)
+
+# Pilih folder save
+folder_penyimpanan <- choose.dir()
+
+# Penamaan file
+path_file_excel <- file.path(folder_penyimpanan, "revisi.xlsx")
+
+# Menyimpan data bentk excel
+write.xlsx(data_na_only_isi_dapil, path_file_excel, rowNames = FALSE)
+cat("Data berhasil disimpan di:", path_file_excel, "\n")
+
+
+#################################################################################
+# Load the data
+library(stringr)
+library(readxl)
+data1 <- read_excel("C:/INDEKSTAT/Matching/DPT 2024.xlsx")
+data2 <- read_excel("C:/INDEKSTAT/Matching/UPDATE 2024.xlsx")
+
+# Function to collapse multiple occurrences of a letter and remove vowels
+clean_text <- function(text) {
+  # Convert to UPPERCASE
+  text <- toupper(text)
+  
+  # Replace specified strings with corresponding numbers (words)
+  word_mappings <- c("SATU" = 1, "DUA" = 2, "TIGA" = 3, "EMPAT" = 4, "LIMA" = 5, "ENAM" = 6,
+                     "TUJUH" = 7, "DELAPAN" = 8, "SEMBILAN" = 9, "SEPULUH" = 10,
+                     "SEBELAS" = 11, "DUA BELAS" = 12, "TIGA BELAS" = 13, "EMPAT BELAS" = 14,
+                     "LIMA BELAS" = 15, "ENAM BELAS" = 16, "TUJUH BELAS" = 17)
+  
+  for (word in names(word_mappings)) {
+    text <- str_replace_all(text, regex(word, ignore_case = TRUE), as.character(word_mappings[word]))
+  }
+  
+  # Replace specified strings with corresponding numbers (symbols to Arabic numerals)
+  numeral_mappings <- c("XVII" = 17, "XVI" = 16, "XV" = 15, "XIV" = 14, "XIII" = 13,
+                        "XII" = 12, "XI" = 11, "X" = 10, "IX" = 9, "VIII" = 8,
+                        "VII" = 7, "VI" = 6, "V" = 5, "IV" = 4, "III" = 3,
+                        "II" = 2, "I" = 1)
+  
+  # Order the mappings by the length of the numeral string in decreasing order
+  numeral_mappings <- numeral_mappings[order(-nchar(names(numeral_mappings)))]
+  
+  # Apply replacements
+  for (numeral in names(numeral_mappings)) {
+    text <- str_replace_all(text, regex(numeral, ignore_case = TRUE), as.character(numeral_mappings[numeral]))
+  }
+  
+  # Convert to lowercase
+  text <- tolower(text)
+  
+  # Collapse multiple occurrences of a letter to a single letter
+  # text <- str_replace_all(text, "(.)\\1+", "\\1")
+  
+  # Remove specified vowels
+  # text <- str_replace_all(text, "[ueobgwmn]", "")
+  
+  # Remove non-alphanumeric characters and digits
+  text <- str_replace_all(text, "[^[:alnum:]]", "")
+  
+  return(text)
+}
+
+# Data cleaning on columns data1$kel, data1$kec, and data1$kab
+data1$clean <- clean_text(paste(data1$kab, data1$kec, data1$kel, sep = " "))
+# Data cleaning on columns data2$new_kab_kota, data2$nm_kec, and data2$nm_desa
+data2$clean <- clean_text(paste(data2$`new kab/kota`, data2$nm_kec, data2$nm_desa, sep = " "))
+
+# Merging the data
+merged_data <- merge(data1, data2, by.x = "clean", by.y = "clean", all.x = TRUE)
+selected_columns <- c(names(data1), names(data2$`new kab/kota`), "nm_kec", "nm_desa", "dapil_kab_2024", "kd_desa")
+final_data <- merged_data[selected_columns]
+
+# Filling in missing values in DAPIL KAB
+final_data$isi_dapil <- ifelse(is.na(final_data$`DAPIL KAB`), final_data$dapil_kab_2024, final_data$`DAPIL KAB`)
+
+# Displaying the data with the new "encoded" column
+View(final_data)
+
+# Counting the number of NAs in each column of final_data
+jumlah_na <- colSums(is.na(final_data))
+print(jumlah_na)
+
+
+# Using subset to display rows with at least one NA value
+data_na_only <- subset(final_data, apply(final_data, 1, function(x) any(is.na(x))))
+View(data_na_only)
+
+# Filtering rows with NA values in isi_dapil column
+data_na_only_isi_dapil <- final_data[is.na(final_data$isi_dapil), ]
+View(data_na_only_isi_dapil)
+
+# Menghitung banyaknya data di data_na_only_isi_dapil
+jumlah_data <- nrow(data_na_only_isi_dapil)
+
+# Menghitung jumlah data dalam setiap kelompok (proporsi)
+jumlah_per_kelompok <- ceiling(jumlah_data / 14)
+
+# Membuat vektor indeks untuk menentukan kelompok setiap baris
+indeks_kelompok <- rep(1:14, each = jumlah_per_kelompok)[1:jumlah_data]
+
+# Menambahkan kolom "pengecek" ke dalam data_na_only_isi_dapil
+data_na_only_isi_dapil$pengecek <- indeks_kelompok
+
+# Menampilkan data
+View(data_na_only_isi_dapil)
+
+
+# Calculate the frequency of unique values in the "pengecek" column
+pengecek_frequency <- table(data_na_only_isi_dapil$pengecek)
+
+# Display the frequencies
+print(pengecek_frequency)
